@@ -220,7 +220,7 @@ def main(Arguments=None):
             doCommand(nextCmdName,nextCmd)
             up_index = 0
         else:
-            print(bytes(nextCmd,'UTF-8'))
+            #print(bytes(nextCmd,'UTF-8'))
             print("\n{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
             #print("{0}, {1}".format(len(nextCmd), nextCmd[:-1]))
     else:
