@@ -50,7 +50,7 @@ __commands = {
 }
 
 # Do not edit these functions below if you don't plan on changing mosh's inner workings
-# as these commands are crucial in order to run commands
+# as these functions are crucial in order to run commands
 def commandExists(commandName=None):
     # define it as global so we can interact with it
     global __names

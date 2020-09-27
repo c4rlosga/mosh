@@ -22,9 +22,13 @@ lastUp = True
 
 def reloadCommands():
     global cmd, ourShell
-    reload(cmd)
-    cmd.init(ourShell)
-    print("Finished reload!")
+    try:
+        reload(cmd)
+        cmd.init(ourShell)
+    except Exception as e:
+        print(f"\nUhh... something went wrong reloading :(\nmosh will stay the same\n{e}")
+    else:
+        print("Finished reload!")
     pass
 
 def exitShell():
@@ -42,28 +46,23 @@ def showHelp():
     t_funcs = []
     # iterate key and value in dict
     for k,v in localCommands.items():
-        # if it's an internal command don't append
+        # if it's an internal command (prepend "__") ignore it
         if not k[:2] == "__":
             t_funcs.append(k)
     for v in cmd.getCommands():
         if not v[:2] == "__":
             t_funcs.append(v)
-    #for i in a sorted list do
+    #for each sorted command name, print it
     for i in sorted(t_funcs):
         print(i)
-    #cmd.runCommand("__help","__help")
     pass
 
 def showHistory():
     global lastCmd
     for entry in lastCmd:
+        # only print the entry if it's valid (not empty, not null)
         if (entry != '') and (entry != "\r") and (entry != lastCmd[0]):
             print(entry)
-
-#def printup():
-#    global up_index
-#    print(f"up_index {up_index} , {lastCmd}")
-#    pass
 
 localCommands = {
     #debug
@@ -94,6 +93,8 @@ def doCommand(commandName=None,passedInput=None):
         #print("we attempted to run a non-existing command. how.")
         localCommands[commandName]()
     else:
+        # if the command isn't mosh's then it's probably an external command
+        # so, let commands.py handle that
         cmd.runCommand(commandName,passedInput)
 
 def getchar():
@@ -117,19 +118,18 @@ def getchar():
 
 def readCmd():
     global lastCmd, up_index
-    #print("readCmd()")
     print(ourShell.shellPrompt,end='')
     sys.stdout.flush()
 
     userString = ""
     isReturn = False
 
+    # get a keypress
     userChar = getchar()
-    print("\r",end="")
+
+    # as long as the keypress isn't Return
     while not userChar == "\r":
         t_in = ""
-        #print("got '{0}', {1}".format(userChar,len(userChar)),end='')
-        #sys.stdout.flush()
         #if we get an ANSI escape sequence
         if userChar == "\x1b":
             #print(f"\ngot esc, {up_index}")
@@ -155,23 +155,29 @@ def readCmd():
                     # ANSI sequence to move cursor
                     print("\33[1C",end='')
                     lastUp = True
-            # a down arrow?
+            # we got a down arrow
             elif t_in == "\x1b[B":
                 # if we've pressed up at least once
                 if up_index != 0:
-                    # clear input buffer
+                    # clear the input buffer
                     t_in = ""
-                    #print(up_index)
+                    # if we're are the last entry already or we have no entries
                     if up_index == 1 and len(lastCmd) == 2:
+                        # clear what was written
                         userString = ""
+                    # if our last keypress was an up arrow, up_index += 2
+                    # don't know why, but it works perfectly
                     if lastUp and len(lastCmd) >= 3:
                         up_index += 2
                         lastUp = False
+                    # if not, then just +1
                     else:
                         up_index += 1
+                    # update what the user has "written" to the command in the history
+                    # and reprint prompt + userString
                     userString = lastCmd[up_index-1]
 
-                    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end=' '*24)
+                    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end=' '*(len(ourShell.shellPrompt)+24))
                     print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
                     print("\33[1C",end='')
                 # so.. we're at the end of command history, pressing down AGAIN?
@@ -184,7 +190,7 @@ def readCmd():
                 #    print("\33[1C",end='')
 
         elif userChar == "\x7f":
-            #print("backspacin")
+            # backspace handling, drop a character, carriage return and reprint
             userString = userString[:-1]
             print("\r{0}{1} ".format(ourShell.shellPrompt,userString),end='')
             print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
@@ -196,33 +202,46 @@ def readCmd():
         userChar = ""
         userChar = getchar()
     else:
-        return userString
+        # if the user input is NOT essentially blank
+        if userString.lstrip() != "" and userString != "\r":
+            # return it
+            return userString
+        # if it is, pass a null/None
+        else:
+            return None
 
 def main(Arguments=None):
     global ourShell, lastCmd, up_index
     printMOTD()
+    # create a new instance so we can set up the class for later reference
     cmd.init(ourShell)
     while not isDone:
+        # get the global nextCmd
         global nextCmd
+        # read user input
         nextCmd = readCmd()
+        # if we have too much in history, keep it 10 items long
         if len(lastCmd) > 10:
             del(lastCmd[9:])
+        # append the command we just ead
         lastCmd.append(nextCmd)
-        nextCmdName = nextCmd.split(' ')[0]
-        if nextCmd.lstrip() == "" or nextCmd == "\r":
-            print("\r{0}{1} ".format(ourShell.shellPrompt,""),end=''*24)
-            print("\r{0}{1}".format(ourShell.shellPrompt,""),end='')
-            print("\33[1C",end='')
-            pass
-        elif cmd.commandExists(nextCmdName) or nextCmdName in localCommands:
-            print()
-            #commands[nextCmdName]()
+
+        # if we didn't get an empty inputº
+        if nextCmd != None:
+            # get ONLY the command name (no parameters)
+            nextCmdName = nextCmd.split(' ')[0]
+
+        # 'hack' to print a newline without changing readCmd()
+        print()
+        if cmd.commandExists(nextCmdName) or nextCmdName in localCommands:
             doCommand(nextCmdName,nextCmd)
+            # reset up_index so our up arrow works properly
             up_index = 0
+        # if the command doesn't exist, error out
+        elif nextCmdName != None:
+            print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
         else:
-            #print(bytes(nextCmd,'UTF-8'))
-            print("\n{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
-            #print("{0}, {1}".format(len(nextCmd), nextCmd[:-1]))
+            pass
     else:
         print("Goodbye!")
         return 0
