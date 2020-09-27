@@ -2,8 +2,6 @@
 import sys
 from importlib import reload
 import commands as cmd
-import gc
-gc.disable()
 
 class Shell:
     def __init__(self):
@@ -226,20 +224,19 @@ def main(Arguments=None):
         # append the command we just ead
         lastCmd.append(nextCmd)
 
-        # if we didn't get an empty inputº
-        if nextCmd != None:
-            # get ONLY the command name (no parameters)
-            nextCmdName = nextCmd.split(' ')[0]
-
         # 'hack' to print a newline without changing readCmd()
         print()
-        if cmd.commandExists(nextCmdName) or nextCmdName in localCommands:
-            doCommand(nextCmdName,nextCmd)
-            # reset up_index so our up arrow works properly
-            up_index = 0
-        # if the command doesn't exist, error out
-        elif nextCmdName != None:
-            print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
+        # if we didn't get a None/null input
+        if nextCmd != None:
+            # get the command name (without parameters)
+            nextCmdName = nextCmd.split(' ')[0]
+            if cmd.commandExists(nextCmdName) or nextCmdName in localCommands:
+                doCommand(nextCmdName,nextCmd)
+                # reset up_index so our up arrow works properly
+                up_index = 0
+                # if the command doesn't exist, error out
+            else:
+                print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
         else:
             pass
     else:
