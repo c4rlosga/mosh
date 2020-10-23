@@ -1,6 +1,6 @@
 #!/bin/env/python3
 # functionName
-from shell_modular import Shell
+from mosh import Shell
 
 # pls no touch
 __names = []
@@ -8,11 +8,11 @@ shellName = ""
 shellVersion = ""
 shellLicense = ""
 shellPrompt = ""
-# end of pls no touch
 
 def runCommand(commandName=None,parameters=None):
     parameters = parameters.split(' ')[1:]
     __commands[commandName](parameters)
+# end of pls no touch
 
 # in order to define a function to interact with mosh properly, you MUST use a
 # new line terminator and you MUST define only ONE function parameter in which
@@ -27,13 +27,16 @@ def runCommand(commandName=None,parameters=None):
 
 # define your functions below
 def helloWorld(parameters=None):
-    print("Hello, world!")
+    print("heehee hoohoo")
     pass
 
 def testMe(parameters=None):
     print("Thanks for using mosh!")
     print(f"Got parameters: {parameters}")
     pass
+
+def xdgOpen(parameters=None):
+
 # define your functions above
 
 # add your commands to the dictionary below
