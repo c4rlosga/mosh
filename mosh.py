@@ -9,7 +9,7 @@ class Shell:
         self.shellVersion = '0.2-history'
         self.shellLicense = 'mo(dular)sh(ell) pit v0 license'
         #self.shellPrompt = "Your!Prompt!Here!> "
-        self.shellPrompt = '> '
+        self.shellPrompt = '(mosh!) '
 
 isDone = False
 nextCmd = []
@@ -112,6 +112,8 @@ def getchar():
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     if ord(ch) == 3: quit() # handle ctrl+C
+    if type(ch) == bytes:
+        ch = bytes.decode(ch)
     return ch
 
 def readCmd():

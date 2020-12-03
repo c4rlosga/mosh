@@ -28,15 +28,30 @@ def runCommand(commandName=None,parameters=None):
 # define your functions below
 def helloWorld(parameters=None):
     print("heehee hoohoo")
-    pass
+    return 0
+
+def cat(parameters=None):
+    import os
+    if len(parameters) <= 0:
+        print("no file given.")
+        return -1
+    for i in parameters:
+        try:
+            file = open(i, 'r')
+            print(file.read(),end='')
+            file.close()
+        except Exception as e:
+            print(f"Whoops, we couldn't open the file \"{i}\".\n{e}")
+    return 0
 
 def testMe(parameters=None):
     print("Thanks for using mosh!")
     print(f"Got parameters: {parameters}")
-    pass
+    return 0
 
 def xdgOpen(parameters=None):
-
+    print("stub function, will probably be *nix only")
+    return -1
 # define your functions above
 
 # add your commands to the dictionary below
@@ -49,7 +64,8 @@ __commands = {
 
     # 'example' : exampleFunction,
     'helloworld' : helloWorld,
-    'testme' : testMe
+    'testme' : testMe,
+    'cat' : cat
 }
 
 # Do not edit these functions below if you don't plan on changing mosh's inner workings
