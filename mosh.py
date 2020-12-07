@@ -43,7 +43,8 @@ def exitShell(parameters=None, pipedInput=None):
 
 def showHelp(parameters=None, pipedInput=None):
     global ourShell
-    helpString = f"""    {ourShell.shellName}, version {ourShell.shellVersion} (x86_64-unknown-linux-gnu)
+    import platform
+    helpString = f"""    {ourShell.shellName}, version {ourShell.shellVersion} (x86_64-{platform.system()})
     These shell commands are defined internally. Type "help" to see this list.
     """
     print(helpString)
@@ -119,13 +120,9 @@ def tee(parameters=None, pipedInput=None):
     return 0
 
 def echo(parameters=None, pipedInput=None):
-    #if pipedInput != None or pipedInput != "":
-    #    parameters.append(pipedInput)
-
     for item in parameters:
         print(item, end=' ') 
-    print("", flush=True)
-    #print(parameters)
+    print("", flush=True, end='')
 
 def printMOTD(parameters=None, pipedInput=None):
     global ourShell
@@ -178,8 +175,8 @@ def lsDir(parameters=None, pipedInput=None):
             elif not dirs_only:
                 # print everything
                 print(item)
-        # if we're inbetween directories, print a new line, make it nice :)
-        if (i != len(parameters)-1) and not (len(parameters) == 1):
+        # if there's more than 1 directory, add a newline in between
+        if (i != len(parameters)-1):
             print()
 
     return 0
@@ -194,6 +191,21 @@ def doCd(parameters=None, pipedInput=None):
     else:
         os.chdir(parameters[0])
 
+def runPy(parameters=None, pipedInput=None):
+    print(pipedInput)
+    if (len(pipedInput) > 0) or (pipedInput != None):
+        try:
+            exec(pipedInput)
+        except Exception as e:
+            print(f"There was an exception whilst running your code\n{e}")
+    if "-f" in parameters or "--file" in parameters:
+        parameters.remove("-f") if "-f" in parameters else parameters.remove("--file")
+        try:
+            exec(open(parameters[0]).read())
+        except Exception as e:
+            print(f"There was an exception whilst running your code\n{e}")
+    return 0
+
 localCommands = {
     #debug
     #'__p_up' : printup,
@@ -206,6 +218,7 @@ localCommands = {
     'echo'      : echo,
     'quit'      : exitShell,
     '?'         : showHelp,
+    'run'       : runPy,
     'ls'        : lsDir,
     'dir'       : lsDir,
     'cd'        : doCd,
@@ -215,7 +228,8 @@ localCommands = {
     'motd'      : printMOTD
 }
 
-def doCommand(commandName=None,passedInput=None, pipedInput=None):
+def doCommand(passedInput=None, pipedInput=None):
+    commandName = passedInput.split(' ')[0]
     if commandName is None or passedInput is None:
         print("we somehow processed a None parameter?")
     if not commandName in cmd.getCommands():
@@ -380,7 +394,8 @@ def main(Arguments=None):
                     #print(len(splitCmd), i)
                     #print(i == (len(splitCmd)-1))
                     if (len(splitCmd) <= 1) or (i == (len(splitCmd)-1)):
-                        doCommand(nextCmdName, nextCmd, pipedInput)
+                        #doCommand(nextCmdName, nextCmd, pipedInput)
+                        doCommand(nextCmd, pipedInput)
                         #print(lastCmd)
                         # reset up_index after executing so our up arrow works properly
                         up_index = 0
@@ -395,12 +410,12 @@ def main(Arguments=None):
                         # assign stdout to the StringIO instance
                         sys.stdout = new_stdout
                         # run command
-                        doCommand(nextCmdName, nextCmd[i], pipedInput)
+                        #doCommand(nextCmdName, nextCmd, pipedInput)
+                        doCommand(nextCmd, pipedInput)
                         # store output in pipedInput
                         pipedInput = new_stdout.getvalue()
                         # restore stdout so we're back to normal
                         sys.stdout = old_stdout
-                        #print(pipedInput)
                 else:
                     print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
     else:
