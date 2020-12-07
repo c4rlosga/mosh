@@ -38,7 +38,7 @@ def runCommand(commandName=None,parameters=None, pipedInput=None):
 
 # define your functions below
 def helloWorld(parameters=None, pipedInput=None):
-    print("heehee hoohoo")
+    print("heehee hoohoo") # heehee hoohoo peepee poopoo
     return 0
 
 
@@ -51,6 +51,19 @@ def testMe(parameters=None, pipedInput=None):
 def xdgOpen(parameters=None, pipedInput=None):
     print("stub function, will probably be *nix only")
     return -1
+
+def clearScreen(self, parameters=None):
+    from sys import platform
+    import os
+    if platform == "linux" or platform == "darwin":
+        os.system('clear')
+    elif platform == "win32":
+        os.system('cls')
+    # Proudly YOINKED from StackOverflow :)
+
+def peckRegex(self, parameters=None): # pipedInput=Perhaps
+    print("Peck Regex placeholder. :(")
+
 # define your functions above
 
 # add your commands to the dictionary below
@@ -64,6 +77,8 @@ __commands = {
     # 'example' : exampleFunction,
     'helloworld' : helloWorld,
     'testme' : testMe,
+    'wipe' : clearScreen,
+    'peck' : peckRegex
 }
 
 # Do not edit these functions below if you don't plan on changing mosh's inner workings
