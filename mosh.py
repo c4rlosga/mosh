@@ -18,7 +18,7 @@ ourShell = Shell()
 up_index = 0
 lastUp = True
 
-def reloadCommands():
+def reloadCommands(parameters=None):
     global cmd, ourShell
     try:
         reload(cmd)
@@ -29,12 +29,12 @@ def reloadCommands():
         print("Finished reload!")
     pass
 
-def exitShell():
+def exitShell(parameters=None):
     global isDone
     isDone = True
     pass
 
-def showHelp():
+def showHelp(parameters=None):
     global ourShell
     helpString = f"""    {ourShell.shellName}, version {ourShell.shellVersion} (x86_64-unknown-linux-gnu)
     These shell commands are defined internally. Type "help" to see this list.
@@ -55,18 +55,50 @@ def showHelp():
         print(i)
     pass
 
-def showHistory():
+def showHistory(parameters=None):
     global lastCmd
     for entry in lastCmd:
         # only print the entry if it's valid (not empty, not null)
         if (entry != '') and (entry != "\r") and (entry != lastCmd[0]):
             print(entry)
 
+def cat(parameters=None):
+    import os
+    if len(parameters) <= 0:
+        print("no file given.")
+        return -1
+    for i in parameters:
+        try:
+            file = open(i, 'r')
+            print(file.read(),end='')
+            file.close()
+        except Exception as e:
+            print(f"Whoops, we couldn't open the file \"{i}\".\n{e}")
+    return 0
+
+def tee(parameters=None):
+    import os
+    append = False
+    if len(parameters) <= 0:
+        print("No parameters. Can't continue.")
+        return -1
+    if "-h" in parameters or "--help" in parameters:
+        print("help for tee goes here")
+        return 0
+    if "-a" in parameters:
+        append = True
+        print("append")
+        parameters.remove("-a")
+
+    return 0
+
 localCommands = {
     #debug
     #'__p_up' : printup,
     #end debug
     'reload'    : reloadCommands,
+    'cat'       : cat,
+    'tee'       : tee,
     'reboot'    : reloadCommands,
     'exit'      : exitShell,
     'quit'      : exitShell,
@@ -89,7 +121,7 @@ def doCommand(commandName=None,passedInput=None):
         print("we somehow processed a None parameter?")
     if not cmd.commandExists(commandName):
         #print("we attempted to run a non-existing command. how.")
-        localCommands[commandName]()
+        localCommands[commandName](passedInput)
     else:
         # if the command isn't mosh's then it's probably an external command
         # so, let commands.py handle that
