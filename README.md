@@ -19,7 +19,7 @@ a very high level mo(dular) sh(ell) scripted in python
   }
   ```
   After saving that, you can type `reload` if you have a running instance or open a new instance of `mosh` to use `hello`, your new command!
-  Further information can be found in the [project Wiki](wiki/Home)
+  Further information can be found in the [project Wiki](../../wiki/Home)
 
 &nbsp;
 ##### Things that work
