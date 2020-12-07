@@ -1,7 +1,7 @@
 #!/bin/env/python3
 # functionName
 from mosh import Shell
-
+import re
 # pls no touch
 __names = []
 shellName = ""
@@ -52,7 +52,13 @@ def xdgOpen(parameters=None, pipedInput=None):
     print("stub function, will probably be *nix only")
     return -1
 
-def clearScreen(self, parameters=None):
+# Changed function definition because, if we check
+# how it's invoked (line 14) the command's arguments
+# are: functionName(parameters,pipe from previous)
+# meaning that (self, parameters) actually gets
+# the pipedInput as parameters
+# def clearScreen(self, parameters=None):
+def clearScreen(parameters=None, pipedInput=None):
     from sys import platform
     import os
     if platform == "linux" or platform == "darwin":
@@ -61,8 +67,16 @@ def clearScreen(self, parameters=None):
         os.system('cls')
     # Proudly YOINKED from StackOverflow :)
 
-def peckRegex(self, parameters=None): # pipedInput=Perhaps
+#def peckRegex(self, parameters=None): # pipedInput=Perhaps
+def peckRegex(parameters=None, pipedInput=None):
+    useRegex = False
     print("Peck Regex placeholder. :(")
+    if "-r" in parameters:
+        useRegex = True
+    for string in pipedInput:
+        re.search(parameters[0], string)
+        # This implementation should be as follows:
+        # echo 
 
 # define your functions above
 
@@ -76,21 +90,12 @@ __commands = {
 
     # 'example' : exampleFunction,
     'helloworld' : helloWorld,
-    'testme' : testMe,
-    'wipe' : clearScreen,
-    'peck' : peckRegex
+    'clear'     : clearScreen,
+    'cls'       : clearScreen,
+    'wipe'      : clearScreen,
+    'testme'    : testMe,
+    'peck'      : peckRegex
 }
-
-# Do not edit these functions below if you don't plan on changing mosh's inner workings
-# as these functions are crucial in order to run commands
-def commandExists(commandName=None):
-    # define it as global so we can interact with it
-    global __names
-    # if we're passed a null command
-    if commandName == None:
-        return 0
-    # if not, just return a bool
-    return (commandName in __names)
 
 def getCommands():
     # get the command names

@@ -1,15 +1,22 @@
 #!/usr/bin/python3
-import sys, re
+import sys, re, os
+from io import StringIO
 from importlib import reload
 import commands as cmd
 
 class Shell:
     def __init__(self):
         self.shellName = 'mosh'
-        self.shellVersion = '0.2-history'
+        self.shellVersion = '0.3-pipes'
         self.shellLicense = 'mo(dular)sh(ell) pit v0 license'
-        #self.shellPrompt = "Your!Prompt!Here!> "
-        self.shellPrompt = '(mosh!) '
+        # this is set as a lambda to test dynamic prompts, got the idea
+        # and used https://stackoverflow.com/a/42499891 as reference for
+        # a "dynamic" f-string without making it too complicated.
+        # That means you can call functions or modules to make them the
+        # prompt as long as they return a string.
+        self.shellPrompt = lambda: f'mosh - {os.getcwd().split("/")[-1]}$ '
+        #self.shellPrompt = lambda: f"Your!Prompt!Here!> "
+
 
 isDone = False
 nextCmd = []
@@ -44,10 +51,12 @@ def showHelp(parameters=None, pipedInput=None):
     t_funcs = []
     # iterate key and value in dict
     for k,v in localCommands.items():
-        # if it's an internal command (prepend "__") ignore it
+        # if it's an internal command (starts with "__") ignore it
+        # if it's not, add it to the table of functions
         if not k[:2] == "__":
             t_funcs.append(k)
     for v in cmd.getCommands():
+        # repeat process with external commands
         if not v[:2] == "__":
             t_funcs.append(v)
     #for each sorted command name, print it
@@ -58,53 +67,132 @@ def showHelp(parameters=None, pipedInput=None):
 def showHistory(parameters=None, pipedInput=None):
     global lastCmd
     for entry in lastCmd:
-        # only print the entry if it's valid (not empty, not null)
+        # only print the entry if it's valid (not empty, not null) and 
+        # don't show the latest entry (which we know 100% will be "history")
         if (entry != '') and (entry != "\r") and (entry != lastCmd[0]):
             print(entry)
 
 def cat(parameters=None, pipedInput=None):
     import os
-    if len(parameters) <= 0:
-        print("no file given.")
-        return -1
+    #if len(parameters) <= 0:
+    #    print("no file given.")
+    #    return -1
     for i in parameters:
         try:
             file = open(i, 'r')
             print(file.read(),end='')
             file.close()
         except Exception as e:
-            print(f"Whoops, we couldn't open the file \"{i}\".\n{e}")
+            print(f"Whoops, we couldn't open the file \"{i}\"\n{e}")
     return 0
 
 def tee(parameters=None, pipedInput=None):
     import os
     append = False
+    if "-h" in parameters or "--help" in parameters:
+        print("tee [OPTIONS] [FILENAME]...")
+        print("\t-a, --append\n\t\tAppend to the file/s given")
+        print("\t-h, --help\n\t\tShow this help message")
     if len(parameters) <= 0:
         print("No parameters. Can't continue.")
         return -1
-    if "-h" in parameters or "--help" in parameters:
-        print("help for tee goes here")
-        return 0
-    if "-a" in parameters:
+    if "-a" in parameters or "--append" in parameters:
         append = True
-        parameters.remove("-a")
-    if append:
-        for filename in parameters:
-            try:
-                open(filename)
-            except:
-                print(f"Whoops, we couldn't open the file \"{filename}\"")
+        parameters.remove("-a") if "-a" in parameters else parameters.remove("--append")
+    for filename in parameters:
+        try:
+            if not append:
+                # if we aren't appending, open as write (replace) and read mode "w+"
+                f = open(filename, "w+")
+                # go to the beginning
+                f.seek(0)
+                f.write(pipedInput)
+                f.truncate()
+            else:
+                # if we're appending, open in append and read mode "a+"
+                f = open(filename, "a+")
+                # append content
+                f.write(pipedInput)
+        except Exception as e:
+            print(f"Whoops, we couldn't open the file \"{filename}\"\n{e}")
 
     return 0
 
 def echo(parameters=None, pipedInput=None):
-    if pipedInput != None:
-        print(pipedInput,end='')
+    #if pipedInput != None or pipedInput != "":
+    #    parameters.append(pipedInput)
 
     for item in parameters:
-        print(item, end=' ')
-    print()
+        print(item, end=' ') 
+    print("", flush=True)
+    #print(parameters)
+
+def printMOTD(parameters=None, pipedInput=None):
+    global ourShell
+
+    MOTD = f"""    {ourShell.shellName} v{ourShell.shellVersion}
+    Distributed under the {ourShell.shellLicense} license.
+    Type 'help' to see available commands."""
+    print(MOTD)
+    pass
+
+def lsDir(parameters=None, pipedInput=None):
+    result = []
+    dirs_only = False
+    if "-h" in parameters or "--help" in parameters:
+        print("ls [OPTIONS] [PATHS]...")
+        print("\tIf no directory is given, the current directory is listed")
+        print("\t-d, --directories\n\t\tOnly show directories")
+        print("\t-h, --help\n\t\tShow this help message")
+    if "-d" in parameters or "--directories" in parameters:
+        dirs_only = True
+        parameters.remove("-d") if "-d" in parameters else parameters.remove("--directories")
+    # if we have no parameters
+    if parameters == None or not parameters:
+        # assume we're listing the current directory
+        parameters.append(os.curdir)
+    # iterate index and item in parameters
+    for i, wd in enumerate(parameters):
+        result.clear()
+        # if there's more than one directory
+        if not (len(parameters) == 1):
+            # print its name
+            print(f"{wd}:")
+        # with each directory, get its contents
+        for item in os.listdir(wd):
+            # if it's a directory, format it as D
+            if os.path.isdir(os.path.join(wd, item)):
+                result.append(f"D    {item}")
+            # if it's a L(ink), hard or soft, an L
+            elif os.path.islink(os.path.join(wd, item)):
+                result.append(f"L    {item}")
+            # if not, it's a file, put an F
+            else:
+                result.append(f"F    {item}")
+        for item in sorted(result):
+            # if we're in directory-only mode and it's a directory
+            if dirs_only and item[0] == 'D':
+                # print it
+                print(item)
+            # if we're not in directory-only mode
+            elif not dirs_only:
+                # print everything
+                print(item)
+        # if we're inbetween directories, print a new line, make it nice :)
+        if (i != len(parameters)-1) and not (len(parameters) == 1):
+            print()
+
     return 0
+
+def getPwd(parameters=None, pipedInput=None):
+    print(os.getcwd())
+    return 0
+
+def doCd(parameters=None, pipedInput=None):
+    if parameters == None or len(parameters) == 0:
+        getPwd()
+    else:
+        os.chdir(parameters[0])
 
 localCommands = {
     #debug
@@ -118,23 +206,19 @@ localCommands = {
     'echo'      : echo,
     'quit'      : exitShell,
     '?'         : showHelp,
+    'ls'        : lsDir,
+    'dir'       : lsDir,
+    'cd'        : doCd,
+    'pwd'       : getPwd,
     'help'      : showHelp,
-    'history'   : showHistory
+    'history'   : showHistory,
+    'motd'      : printMOTD
 }
-
-def printMOTD():
-    global ourShell
-
-    MOTD = f"""    {ourShell.shellName} v{ourShell.shellVersion}
-    Distributed under the {ourShell.shellLicense} license.
-    Type 'help' to see available commands."""
-    print(MOTD)
-    pass
 
 def doCommand(commandName=None,passedInput=None, pipedInput=None):
     if commandName is None or passedInput is None:
         print("we somehow processed a None parameter?")
-    if not cmd.commandExists(commandName):
+    if not commandName in cmd.getCommands():
         #print("we attempted to run a non-existing command. how.")
         passedInput = passedInput.split(' ')[1:]
         localCommands[commandName](passedInput, pipedInput)
@@ -166,7 +250,7 @@ def getchar():
 
 def readCmd():
     global lastCmd, up_index
-    print(ourShell.shellPrompt,end='')
+    print(ourShell.shellPrompt(),end='')
     sys.stdout.flush()
 
     userString = ""
@@ -198,8 +282,8 @@ def readCmd():
                     # advance pointer to the next position
                     up_index -= 1
                     # dirty hack with carriage return to clear line
-                    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end=' '*24)
-                    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
+                    print("\r{0}{1}".format(ourShell.shellPrompt(),userString),end=' '*24)
+                    print("\r{0}{1}".format(ourShell.shellPrompt(),userString),end='')
                     # ANSI sequence to move cursor
                     print("\33[1C",end='')
                     lastUp = True
@@ -225,27 +309,27 @@ def readCmd():
                     # and reprint prompt + userString
                     userString = lastCmd[up_index-1]
 
-                    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end=' '*(len(ourShell.shellPrompt)+24))
-                    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
+                    print("\r{0}{1}".format(ourShell.shellPrompt(),userString),end=' '*(len(ourShell.shellPrompt())+24))
+                    print("\r{0}{1}".format(ourShell.shellPrompt(),userString),end='')
                     print("\33[1C",end='')
                 # so.. we're at the end of command history, pressing down AGAIN?
                 #elif len(userString) > 0:
                 #    # then I guess you just want to clean your input??
                 #    userString = ""
                 #    up_index = 0
-                #    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end=' '*24)
-                #    print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
+                #    print("\r{0}{1}".format(ourShell.shellPrompt()),userString),end=' '*24)
+                #    print("\r{0}{1}".format(ourShell.shellPrompt()),userString),end='')
                 #    print("\33[1C",end='')
 
         elif userChar == "\x7f":
             # backspace handling, drop a character, carriage return and reprint
             userString = userString[:-1]
-            print("\r{0}{1} ".format(ourShell.shellPrompt,userString),end='')
-            print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
+            print("\r{0}{1} ".format(ourShell.shellPrompt(),userString),end='')
+            print("\r{0}{1}".format(ourShell.shellPrompt(),userString),end='')
             print("\33[1C",end='')
         else:
             userString += userChar
-            print("\r{0}{1}".format(ourShell.shellPrompt,userString),end='')
+            print("\r{0}{1}".format(ourShell.shellPrompt(),userString),end='')
             print("\33[1C",end='')
         userChar = ""
         userChar = getchar()
@@ -277,23 +361,48 @@ def main(Arguments=None):
         # stupid workaround to print a newline without changing readCmd()
         print()
         # if we didn't get a None/null input
-        #nextCmd = nextCmd.split("|")
-        if nextCmd != None:
-            # get the command name (without parameters)
-            nextCmdName = nextCmd.split(' ')[0]
-            # check if the current cmd instance knows the command or if it's a shell command
-            if cmd.commandExists(nextCmdName) or nextCmdName in localCommands:
-                # if it exists, run it
-                doCommand(nextCmdName,nextCmd)
-                #print(lastCmd)
-                # reset up_index after executing so our up arrow works properly
-                up_index = 0
-                # if the command doesn't exist, error out
-            else:
-                print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
-        #else:
-            # if nextCmd _is_ None (somehow), ignore
-        #    pass
+        regExp = r'(?!\B"[^"]*)\|(?![^"]*"\B)(?<!\\\|)'
+        # this absolute behemoth of a regex is a mix of https://stackoverflow.com/questions/21105360/regex-find-comma-not-inside-quotes/21106122
+        # and my own workings to detect pipes that aren't escaped or in quotes
+        try:
+            splitCmd = list(re.split(regExp, nextCmd))
+        except:
+            continue
+        pipedInput = ""
+        for i, item in enumerate(splitCmd):
+            nextCmd = item.strip()
+            if nextCmd != None:
+                # get the command name (without parameters)
+                nextCmdName = nextCmd.split(' ')[0]
+                # check if the current cmd instance knows the command or if it's a shell command
+                if nextCmdName in cmd.getCommands() or nextCmdName in localCommands:
+                    # if it exists, and is the only/last command
+                    #print(len(splitCmd), i)
+                    #print(i == (len(splitCmd)-1))
+                    if (len(splitCmd) <= 1) or (i == (len(splitCmd)-1)):
+                        doCommand(nextCmdName, nextCmd, pipedInput)
+                        #print(lastCmd)
+                        # reset up_index after executing so our up arrow works properly
+                        up_index = 0
+                        # if the command doesn't exist, error out
+                    else:
+                        #print("piped")
+                        # source: https://www.kite.com/python/answers/how-to-redirect-print-output-to-a-variable-in-python
+                        # store the reference to stdout
+                        old_stdout = sys.stdout
+                        # create a new stdout as a StringIO
+                        new_stdout = StringIO()
+                        # assign stdout to the StringIO instance
+                        sys.stdout = new_stdout
+                        # run command
+                        doCommand(nextCmdName, nextCmd[i], pipedInput)
+                        # store output in pipedInput
+                        pipedInput = new_stdout.getvalue()
+                        # restore stdout so we're back to normal
+                        sys.stdout = old_stdout
+                        #print(pipedInput)
+                else:
+                    print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
     else:
         print("Goodbye!")
         return 0
