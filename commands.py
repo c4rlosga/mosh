@@ -9,9 +9,9 @@ shellVersion = ""
 shellLicense = ""
 shellPrompt = ""
 
-def runCommand(commandName=None,parameters=None):
+def runCommand(commandName=None,parameters=None, pipedInput=None):
     parameters = parameters.split(' ')[1:]
-    __commands[commandName](parameters)
+    __commands[commandName](parameters, pipedInput)
 # end of pls no touch
 
 # in order to define a function to interact with mosh properly, you MUST use a
@@ -19,24 +19,36 @@ def runCommand(commandName=None,parameters=None):
 # you'll receive the user's parameters.
 # What that means is that if the user types "ip link dev eth0" you'll receive
 # the following array: ['link','dev','eth0'].
+#
+# Along with that, there's pipedInput which CAN be None (null) as the command
+# may or may not be piped from a previous command. Whether you use it or not
+# is up to you, but the premise of it is just to use what would otherwise 
+# would be standard buffer input (stdin) but I'm too lazy to engineer it 
+# otherwise.
+# example of pipe: 
+# echo "Hello world!" | tee file1.txt file2.txt
+# in this case, parameters = ["file1.txt", "file2.txt"]
+# and           pipedInput = "Hello world!"
 
-# def exampleFunction(parameters=None):
+# def exampleFunction(parameters=None, pipedInput=None):
 #     print("Hi!")
 #     print(f"We got the following parameters: {parameters}")
+#     print(f"Through a pipe from a previous command we got this: {pipedInput}")
 #     pass
 
 # define your functions below
-def helloWorld(parameters=None):
+def helloWorld(parameters=None, pipedInput=None):
     print("heehee hoohoo")
     return 0
 
 
-def testMe(parameters=None):
+def testMe(parameters=None, pipedInput=None):
     print("Thanks for using mosh!")
     print(f"Got parameters: {parameters}")
+    print(f"Got this pipe: {pipedInput}")
     return 0
 
-def xdgOpen(parameters=None):
+def xdgOpen(parameters=None, pipedInput=None):
     print("stub function, will probably be *nix only")
     return -1
 # define your functions above

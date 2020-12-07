@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import sys
+import sys, re
 from importlib import reload
 import commands as cmd
 
@@ -18,7 +18,7 @@ ourShell = Shell()
 up_index = 0
 lastUp = True
 
-def reloadCommands(parameters=None):
+def reloadCommands(parameters=None, pipedInput=None):
     global cmd, ourShell
     try:
         reload(cmd)
@@ -29,12 +29,12 @@ def reloadCommands(parameters=None):
         print("Finished reload!")
     pass
 
-def exitShell(parameters=None):
+def exitShell(parameters=None, pipedInput=None):
     global isDone
     isDone = True
     pass
 
-def showHelp(parameters=None):
+def showHelp(parameters=None, pipedInput=None):
     global ourShell
     helpString = f"""    {ourShell.shellName}, version {ourShell.shellVersion} (x86_64-unknown-linux-gnu)
     These shell commands are defined internally. Type "help" to see this list.
@@ -55,14 +55,14 @@ def showHelp(parameters=None):
         print(i)
     pass
 
-def showHistory(parameters=None):
+def showHistory(parameters=None, pipedInput=None):
     global lastCmd
     for entry in lastCmd:
         # only print the entry if it's valid (not empty, not null)
         if (entry != '') and (entry != "\r") and (entry != lastCmd[0]):
             print(entry)
 
-def cat(parameters=None):
+def cat(parameters=None, pipedInput=None):
     import os
     if len(parameters) <= 0:
         print("no file given.")
@@ -76,7 +76,7 @@ def cat(parameters=None):
             print(f"Whoops, we couldn't open the file \"{i}\".\n{e}")
     return 0
 
-def tee(parameters=None):
+def tee(parameters=None, pipedInput=None):
     import os
     append = False
     if len(parameters) <= 0:
@@ -87,9 +87,23 @@ def tee(parameters=None):
         return 0
     if "-a" in parameters:
         append = True
-        print("append")
         parameters.remove("-a")
+    if append:
+        for filename in parameters:
+            try:
+                open(filename)
+            except:
+                print(f"Whoops, we couldn't open the file \"{filename}\"")
 
+    return 0
+
+def echo(parameters=None, pipedInput=None):
+    if pipedInput != None:
+        print(pipedInput,end='')
+
+    for item in parameters:
+        print(item, end=' ')
+    print()
     return 0
 
 localCommands = {
@@ -99,8 +113,9 @@ localCommands = {
     'reload'    : reloadCommands,
     'cat'       : cat,
     'tee'       : tee,
-    'reboot'    : reloadCommands,
+    #'reboot'    : reloadCommands,
     'exit'      : exitShell,
+    'echo'      : echo,
     'quit'      : exitShell,
     '?'         : showHelp,
     'help'      : showHelp,
@@ -116,16 +131,17 @@ def printMOTD():
     print(MOTD)
     pass
 
-def doCommand(commandName=None,passedInput=None):
+def doCommand(commandName=None,passedInput=None, pipedInput=None):
     if commandName is None or passedInput is None:
         print("we somehow processed a None parameter?")
     if not cmd.commandExists(commandName):
         #print("we attempted to run a non-existing command. how.")
-        localCommands[commandName](passedInput)
+        passedInput = passedInput.split(' ')[1:]
+        localCommands[commandName](passedInput, pipedInput)
     else:
         # if the command isn't mosh's then it's probably an external command
         # so, let commands.py handle that
-        cmd.runCommand(commandName,passedInput)
+        cmd.runCommand(commandName,passedInput, pipedInput)
 
 def getchar():
     # Returns a single character from standard input
@@ -254,25 +270,30 @@ def main(Arguments=None):
         nextCmd = readCmd()
         # if we have too much in history, keep it 10 items long
         if len(lastCmd) > 10:
-            del(lastCmd[9:])
-        # append the command we just ead
+            del(lastCmd[-1])
+        # append the command we just read from user input
         lastCmd.append(nextCmd)
 
-        # 'hack' to print a newline without changing readCmd()
+        # stupid workaround to print a newline without changing readCmd()
         print()
         # if we didn't get a None/null input
+        #nextCmd = nextCmd.split("|")
         if nextCmd != None:
             # get the command name (without parameters)
             nextCmdName = nextCmd.split(' ')[0]
+            # check if the current cmd instance knows the command or if it's a shell command
             if cmd.commandExists(nextCmdName) or nextCmdName in localCommands:
+                # if it exists, run it
                 doCommand(nextCmdName,nextCmd)
-                # reset up_index so our up arrow works properly
+                #print(lastCmd)
+                # reset up_index after executing so our up arrow works properly
                 up_index = 0
                 # if the command doesn't exist, error out
             else:
                 print("{0}: {1}: command not found".format(ourShell.shellName, nextCmd))
-        else:
-            pass
+        #else:
+            # if nextCmd _is_ None (somehow), ignore
+        #    pass
     else:
         print("Goodbye!")
         return 0
