@@ -36,4 +36,3 @@ a very high level mo(dular) sh(ell) scripted in python
  - Return codes/return status
  - Add colors
  - Check/fix compatibility with Win/NT based systems (remove dependencies on \*NIX carriage control, for instance)
- - 
