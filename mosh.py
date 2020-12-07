@@ -109,11 +109,13 @@ def tee(parameters=None, pipedInput=None):
                 f.seek(0)
                 f.write(pipedInput)
                 f.truncate()
+                print(pipedInput)
             else:
                 # if we're appending, open in append and read mode "a+"
                 f = open(filename, "a+")
                 # append content
                 f.write(pipedInput)
+                print(pipedInput)
         except Exception as e:
             print(f"Whoops, we couldn't open the file \"{filename}\"\n{e}")
 
@@ -192,7 +194,6 @@ def doCd(parameters=None, pipedInput=None):
         os.chdir(parameters[0])
 
 def runPy(parameters=None, pipedInput=None):
-    print(pipedInput)
     if (len(pipedInput) > 0) or (pipedInput != None):
         try:
             exec(pipedInput)
