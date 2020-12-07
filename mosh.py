@@ -109,7 +109,7 @@ def tee(parameters=None, pipedInput=None):
                 f.seek(0)
                 f.write(pipedInput)
                 f.truncate()
-                print(pipedInput)
+                print(pipedInput, end='')
             else:
                 # if we're appending, open in append and read mode "a+"
                 f = open(filename, "a+")
@@ -269,6 +269,7 @@ def readCmd():
     sys.stdout.flush()
 
     userString = ""
+    t_in = ""
     isReturn = False
 
     # get a keypress
@@ -276,10 +277,9 @@ def readCmd():
 
     # as long as the keypress isn't Return
     while not userChar == "\r":
-        t_in = ""
         #if we get an ANSI escape sequence
         if userChar == "\x1b":
-            #print(f"\ngot esc, {up_index}")
+            # clear buffer
             t_in = ""
             # store it
             t_in += userChar
@@ -336,7 +336,7 @@ def readCmd():
                 #    print("\r{0}{1}".format(ourShell.shellPrompt()),userString),end='')
                 #    print("\33[1C",end='')
 
-        elif userChar == "\x7f":
+        elif userChar == "\x7f" or userChar == "\x08":
             # backspace handling, drop a character, carriage return and reprint
             userString = userString[:-1]
             print("\r{0}{1} ".format(ourShell.shellPrompt(),userString),end='')
