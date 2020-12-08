@@ -70,13 +70,27 @@ def clearScreen(parameters=None, pipedInput=None):
 #def peckRegex(self, parameters=None): # pipedInput=Perhaps
 def peckRegex(parameters=None, pipedInput=None):
     useRegex = False
-    print("Peck Regex placeholder. :(")
-    if "-r" in parameters:
+    #print("Peck Regex placeholder. :(")
+    # If we find -r or --regex
+    if "-h" in parameters or "--help" in parameters:
+        print("stub help")
+        return
+    if "-r" in parameters or "--regex" in parameters:
+        # acknowledge it
         useRegex = True
-    for string in pipedInput:
-        re.search(parameters[0], string)
-        # This implementation should be as follows:
-        # echo 
+        # remove either of the two  
+        parameters.remove("-r") if "-r" in parameters else parameters.remove("--regex")
+    if useRegex:
+        # cat file | peck -r 'searchregex' 'substitution' 
+        # compile our string into a regex 
+        regex = re.compile(parameters[0])
+        # once turned into regex, print the substitution of all matches in pipedInput
+        # and replace() double empty lines at the end
+        print(regex.sub(parameters[1], pipedInput).replace('\n\n','\n'))
+    else:
+        # print the substitution of all instances of the first parameter with {parameter} in pipedInput
+        # and replace() double empty lines
+        print(re.sub(parameters[0], f'{{{parameters[0]}}}', pipedInput).replace('\n\n','\n'))
 
 # define your functions above
 
