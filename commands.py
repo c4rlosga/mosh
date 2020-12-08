@@ -10,7 +10,6 @@ shellLicense = ""
 shellPrompt = ""
 
 def runCommand(commandName=None,parameters=None, pipedInput=None):
-    parameters = parameters.split(' ')[1:]
     __commands[commandName](parameters, pipedInput)
 # end of pls no touch
 
@@ -86,7 +85,7 @@ def peckRegex(parameters=None, pipedInput=None):
         regex = re.compile(parameters[0])
         # once turned into regex, print the substitution of all matches in pipedInput
         # and replace() double empty lines at the end
-        print(regex.sub(parameters[1], pipedInput).replace('\n\n','\n'))
+        print(regex.sub(parameters[1], pipedInput).replace('\n\n','\n').strip())
     else:
         # print the substitution of all instances of the first parameter with {parameter} in pipedInput
         # and replace() double empty lines

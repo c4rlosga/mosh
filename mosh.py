@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import sys, re, os
+import sys, re, os, shlex
 from io import StringIO
 from importlib import reload
 import commands as cmd
@@ -124,7 +124,7 @@ def tee(parameters=None, pipedInput=None):
 def echo(parameters=None, pipedInput=None):
     for item in parameters:
         print(item, end=' ') 
-    print("", flush=True, end='')
+    print("", flush=True)
 
 def printMOTD(parameters=None, pipedInput=None):
     global ourShell
@@ -233,14 +233,16 @@ def doCommand(passedInput=None, pipedInput=None):
     commandName = passedInput.split(' ')[0]
     if commandName is None or passedInput is None:
         print("we somehow processed a None parameter?")
-    if not commandName in cmd.getCommands():
+        return
+    parameters = shlex.split(passedInput)[1:]
+    if commandName in localCommands:
         #print("we attempted to run a non-existing command. how.")
-        passedInput = passedInput.split(' ')[1:]
-        localCommands[commandName](passedInput, pipedInput)
-    else:
-        # if the command isn't mosh's then it's probably an external command
+        #parameters = passedInput.split(' ')[1:]
+        localCommands[commandName](parameters, pipedInput)
+    elif commandName in cmd.getCommands():
+        # if the command isn't internal then it's probably an external command
         # so, let commands.py handle that
-        cmd.runCommand(commandName,passedInput, pipedInput)
+        cmd.runCommand(commandName, parameters, pipedInput)
 
 def getchar():
     # Returns a single character from standard input
